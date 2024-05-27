@@ -10,6 +10,11 @@ public section.
     !IV_BP_REL type FLAG default 'X'
   exporting
     !EV_BP_FOUND type FLAG .
+
+  class-methods M_HIDE_UIBB
+  importing
+    !IO_OVP type ref to IF_FPM_OVP.
+
 protected section.
 private section.
 ENDCLASS.
@@ -123,6 +128,38 @@ CLASS ZCL_MDGBP_UTILITY IMPLEMENTATION.
       ENDLOOP.
 
     ENDIF.
+
+  ENDMETHOD.
+
+  METHOD M_HIDE_UIBB.
+* This should be a post exit of IF_FPM_OVP_CONF_EXIT-OVERRIDE_EVENT_OVP
+* It will hide uibbs dinamycally at runtime
+    DATA:
+      lo_event TYPE REF TO cl_fpm_event,
+      lt_uibb  TYPE if_fpm_ovp=>ty_t_uibb.
+
+    TRY.
+      " Get current event
+      lo_event = io_ovp->get_event( ).
+
+      " Only for FPM EDIT event
+      CHECK lo_event->mv_event_id = if_fpm_constants=>gc_event-edit.
+
+      " Get uibbs
+      io_ovp->get_uibbs( IMPORTING et_uibb = lt_uibb ).
+
+      " Search for the uibb we want to hide
+      READ TABLE lt_uibb INTO DATA(ls_uibb)
+      WITH KEY config_id = '<YOUR_CONFIG_ID>'.
+
+      " Found! lets hide it
+      IF sy-subrc = 0.
+        ls_uibb-hidden = abap_true.
+        io_ovp->change_uibb( EXPORTING is_uibb = ls_uibb ).
+      ENDIF.
+
+      CATCH cx_fpm_floorplan.
+    ENDTRY.
 
   ENDMETHOD.
 ENDCLASS.
